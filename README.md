@@ -58,3 +58,8 @@ The application allows users to:
 
 7. **URL**
   - https://mausam4cast.netlify.app/
+
+
+
+<img width="1379" height="853" alt="image" src="https://github.com/user-attachments/assets/c62aa6e7-5151-4a26-b289-923006256919" />
+
