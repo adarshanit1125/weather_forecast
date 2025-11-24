@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Weather Forecast App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+
+    <style>
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Hide scrollbar for forecast scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body
+    class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-950 to-sky-900 text-slate-100 flex items-center justify-center p-3 md:p-6">
+    <div id="appShell"
+        class="w-full max-w-5xl bg-white/10 border border-white/10 rounded-3xl shadow-2xl backdrop-blur-lg overflow-hidden">
+        <!-- Header -->
+        <header
+            class="px-4 sm:px-6 py-4 sm:py-5 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight">
+                    Weather Forecast
+                </h1>
+                <p class="text-sm sm:text-base text-slate-200/80">
+                    Search by city or use your current location to view today’s weather
+                    and a 5-day forecast.
+                </p>
+            </div>
+            <div class="text-xs sm:text-sm text-right text-slate-200/70" id="currentDate"></div>
+        </header>
+
+        <!-- Global Alert / Error bar -->
+        <div id="messageBar" class="hidden px-4 sm:px-6 py-3 text-sm font-medium"></div>
+
+        <!-- Main content -->
+        <main class="px-4 sm:px-6 pb-6 pt-3 space-y-4 sm:space-y-6">
+            <!-- Search & Controls -->
+            <section
+                class="bg-slate-950/40 border border-slate-700/60 rounded-2xl p-3 sm:p-4 flex flex-col lg:flex-row gap-3 lg:gap-4">
+                <!-- Search form -->
+                <form id="searchForm" class="flex-1 flex flex-col sm:flex-row gap-3">
+                    <div class="flex-1 flex gap-2">
+                        <input id="cityInput" type="text" placeholder="Enter city name (e.g., Delhi)"
+                            class="w-full rounded-xl bg-slate-900/60 border border-slate-700 px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-sky-400/80 focus:border-sky-400 placeholder:text-slate-500" />
+                        <button type="submit"
+                            class="rounded-xl px-3 sm:px-4 py-2 text-sm sm:text-base font-medium bg-sky-500 hover:bg-sky-400 active:bg-sky-600 transition shadow-md shadow-sky-500/30">
+                            Search
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Right controls -->
+                <div class="flex flex-col sm:flex-row gap-3 lg:w-72">
+                    <button id="currentLocationBtn"
+                        class="flex-1 rounded-xl px-3 py-2 text-sm sm:text-base font-medium bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 transition shadow-md shadow-emerald-500/30 flex items-center justify-center gap-2"
+                        type="button">
+                        <span>Use My Location</span>
+                    </button>
+
+                    <!-- Recent cities dropdown -->
+                    <div class="flex-1">
+                        <select id="recentCitiesSelect"
+                            class="w-full rounded-xl bg-slate-900/60 border border-slate-700 px-3 py-2 text-sm sm:text-base text-slate-100 disabled:text-slate-500"
+                            disabled>
+                            <option value="">Recent cities</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Today + Forecast layout -->
+            <section class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-4 sm:gap-5">
+                <!-- Today’s weather -->
+                <section id="todaySection"
+                    class="bg-slate-950/40 border border-slate-700/60 rounded-2xl p-4 sm:p-5 min-h-[230px] flex flex-col gap-3 fade-in">
+                    <!-- Loading state -->
+                    <div id="loadingState" class="hidden text-sm text-slate-300 flex items-center gap-2">
+                        <span
+                            class="inline-block h-3 w-3 rounded-full border-2 border-sky-400 border-t-transparent animate-spin"></span>
+                        <span>Fetching latest weather data...</span>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="emptyState" class="text-sm sm:text-base text-slate-300/90">
+                        Start by searching for a city or use your current location.
+                    </div>
+
+                    <!-- Current weather content -->
+                    <div id="todayContent" class="hidden space-y-4">
+                        <!-- City & basic info -->
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h2 id="cityName" class="text-xl sm:text-2xl font-semibold tracking-tight"></h2>
+                                <p id="countryName" class="text-sm text-slate-300/80"></p>
+                                <p id="weatherDescription" class="mt-1 text-sm font-medium text-slate-100"></p>
+                            </div>
+                            <div class="flex items-center gap-3 sm:gap-4">
+                                <img id="weatherIcon" alt="Weather icon" class="w-14 h-14 sm:w-16 sm:h-16" />
+                                <div class="text-right">
+                                    <div class="flex items-baseline justify-end gap-1">
+                                        <span id="temperatureValue" class="text-3xl sm:text-4xl font-semibold"></span>
+                                        <span id="temperatureUnit" class="text-lg">°C</span>
+                                    </div>
+                                    <p id="feelsLike" class="text-xs sm:text-sm text-slate-300/80"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Unit toggle & alerts -->
+                        <div class="flex flex-col gap-3">
+                            <!-- Unit toggle -->
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs sm:text-sm text-slate-300">Today’s temperature unit:</span>
+                                <div
+                                    class="inline-flex rounded-full bg-slate-900/70 border border-slate-700 p-1 text-xs sm:text-sm">
+                                    <button id="celsiusBtn" type="button"
+                                        class="px-3 py-1 rounded-full bg-sky-500 text-white font-medium">
+                                        °C
+                                    </button>
+                                    <button id="fahrenheitBtn" type="button"
+                                        class="px-3 py-1 rounded-full text-slate-200 hover:bg-slate-800/80">
+                                        °F
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Extreme temperature alert -->
+                            <div id="extremeAlert"
+                                class="hidden rounded-xl border border-red-500/70 bg-red-500/10 px-3 py-2 text-xs sm:text-sm text-red-100 flex items-start gap-2">
+                                <span
+                                    class="mt-0.5 inline-flex items-center justify-center h-4 w-4 rounded-full border border-red-300 text-[10px] font-bold">!</span>
+                                <p>
+                                    Extreme temperature alert: It’s very hot today. Stay
+                                    hydrated and avoid going out during peak afternoon hours.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Extra details -->
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
+                            <div class="bg-slate-900/70 rounded-xl p-3 border border-slate-700/60">
+                                <p class="text-slate-300/80">Humidity</p>
+                                <p id="humidity" class="mt-1 text-lg font-semibold text-sky-300"></p>
+                            </div>
+                            <div class="bg-slate-900/70 rounded-xl p-3 border border-slate-700/60">
+                                <p class="text-slate-300/80">Wind Speed</p>
+                                <p id="windSpeed" class="mt-1 text-lg font-semibold text-sky-300"></p>
+                            </div>
+                            <div class="bg-slate-900/70 rounded-xl p-3 border border-slate-700/60">
+                                <p class="text-slate-300/80">Min / Max</p>
+                                <p id="minMaxTemp" class="mt-1 text-lg font-semibold text-sky-300"></p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5-day forecast -->
+                <section
+                    class="bg-slate-950/40 border border-slate-700/60 rounded-2xl p-4 sm:p-5 flex flex-col gap-3 fade-in">
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-lg sm:text-xl font-semibold tracking-tight">
+                            5-Day Forecast
+                        </h2>
+                        <p class="text-xs sm:text-sm text-slate-300/80" id="forecastSubtitle">
+                            No forecast loaded yet.
+                        </p>
+                    </div>
+
+                    <div id="forecastContainer" class="flex gap-3 overflow-x-auto no-scrollbar pt-1 pb-1 min-h-[140px]">
+                        <!-- Forecast cards will be dynamically inserted here -->
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <!-- App script -->
+    <script src="./script.js"></script>
+</body>
+
+</html>
